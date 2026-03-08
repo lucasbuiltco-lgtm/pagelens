@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 export default function Home() {
@@ -8,7 +8,15 @@ export default function Home() {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [auditCount, setAuditCount] = useState<number | null>(null);
   const router = useRouter();
+
+  useEffect(() => {
+    fetch("/api/stats")
+      .then((r) => r.json())
+      .then((d) => setAuditCount(d.audits))
+      .catch(() => {});
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -33,6 +41,9 @@ export default function Home() {
 
     setLoading(true);
     try {
+      // Increment stats counter
+      fetch("/api/stats", { method: "POST" }).catch(() => {});
+
       const res = await fetch("/api/preview", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -55,6 +66,33 @@ export default function Home() {
     }
   }
 
+  const faqs = [
+    {
+      q: "Is the preview really free?",
+      a: "Yes. You get your overall score and category letter grades at no cost, with no account required. The full report with detailed insights and recommendations is $4.99.",
+    },
+    {
+      q: "What does the AI actually analyze?",
+      a: "PageLens evaluates your landing page across six dimensions: value proposition clarity, CTA effectiveness, copy quality, trust signals, SEO basics, and overall page structure. Each dimension gets a letter grade and a detailed breakdown in the full report.",
+    },
+    {
+      q: "Does it work on any URL?",
+      a: "PageLens works on any publicly accessible landing page. Pages behind a login, CAPTCHA, or bot protection may not be analyzable.",
+    },
+    {
+      q: "How long does the analysis take?",
+      a: "The free preview typically takes 10–20 seconds. The full report may take a bit longer as the AI goes deeper into each category.",
+    },
+    {
+      q: "Do I need to create an account?",
+      a: "No account needed for the free preview. Your email is optional — provide it if you'd like a copy of the report delivered to your inbox.",
+    },
+    {
+      q: "Who is PageLens for?",
+      a: "PageLens is built for founders, marketers, and agencies who want fast, actionable feedback on landing pages without waiting for a manual expert review.",
+    },
+  ];
+
   return (
     <main className="min-h-screen">
       {/* Nav */}
@@ -76,10 +114,18 @@ export default function Home() {
           <br />
           <span className="text-electric-500">of any landing page</span>
         </h1>
-        <p className="text-lg text-slate-400 max-w-2xl mx-auto mb-12">
+        <p className="text-lg text-slate-400 max-w-2xl mx-auto mb-4">
           Paste a URL and instantly see your overall score and category grades —
           free. Unlock the full report with detailed insights and actionable
           improvements for $4.99.
+        </p>
+        <p className="text-sm text-slate-500 mb-10">
+          Trusted by marketers, founders, and agencies.
+          {auditCount !== null && (
+            <span className="ml-2 text-electric-400 font-medium">
+              {auditCount.toLocaleString()} audits run so far.
+            </span>
+          )}
         </p>
 
         {/* Form */}
@@ -94,18 +140,19 @@ export default function Home() {
               disabled={loading}
             />
             <div className="flex flex-col sm:flex-row gap-3">
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="your@email.com"
-                required
-                className="flex-1 px-5 py-4 bg-navy-800 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-electric-500 focus:ring-1 focus:ring-electric-500 transition-all"
-                disabled={loading}
-              />
+              <div className="flex-1 relative">
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="your@email.com (optional)"
+                  className="w-full px-5 py-4 bg-navy-800 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-electric-500 focus:ring-1 focus:ring-electric-500 transition-all"
+                  disabled={loading}
+                />
+              </div>
               <button
                 type="submit"
-                disabled={loading || !url.trim() || !email.trim()}
+                disabled={loading || !url.trim()}
                 className="px-8 py-4 bg-electric-500 hover:bg-electric-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-all text-lg whitespace-nowrap"
               >
                 {loading ? (
@@ -138,6 +185,9 @@ export default function Home() {
             </div>
           </div>
           {error && <p className="mt-3 text-red-400 text-sm">{error}</p>}
+          <p className="mt-3 text-xs text-slate-600">
+            No account required. Email is optional.
+          </p>
         </form>
       </section>
 
@@ -218,6 +268,24 @@ export default function Home() {
             >
               <h3 className="text-white font-medium mb-1">{f.title}</h3>
               <p className="text-slate-500 text-sm">{f.desc}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* FAQ */}
+      <section className="max-w-3xl mx-auto px-6 py-20">
+        <h2 className="text-3xl font-bold text-white text-center mb-14">
+          Frequently asked questions
+        </h2>
+        <div className="flex flex-col gap-6">
+          {faqs.map((faq) => (
+            <div
+              key={faq.q}
+              className="p-6 bg-navy-800/40 border border-slate-800 rounded-xl"
+            >
+              <h3 className="text-white font-semibold mb-2">{faq.q}</h3>
+              <p className="text-slate-400 text-sm leading-relaxed">{faq.a}</p>
             </div>
           ))}
         </div>
