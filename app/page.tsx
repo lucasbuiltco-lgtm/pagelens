@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 
 export default function Home() {
   const [url, setUrl] = useState("");
+  const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const router = useRouter();
@@ -32,19 +33,20 @@ export default function Home() {
 
     setLoading(true);
     try {
-      const res = await fetch("/api/checkout", {
+      const res = await fetch("/api/preview", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: normalizedUrl }),
+        body: JSON.stringify({ url: normalizedUrl, email: email.trim() }),
       });
 
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(data.error || "Failed to start checkout");
+        throw new Error(data.error || "Failed to generate preview");
       }
 
-      const { sessionUrl } = await res.json();
-      window.location.href = sessionUrl;
+      const preview = await res.json();
+      sessionStorage.setItem("previewData", JSON.stringify(preview));
+      router.push(`/preview?id=${preview.reportId}`);
     } catch (err: unknown) {
       const message =
         err instanceof Error ? err.message : "Something went wrong";
@@ -70,58 +72,70 @@ export default function Home() {
           AI-Powered Landing Page Analysis
         </div>
         <h1 className="text-5xl md:text-6xl font-bold text-white leading-tight mb-6">
-          Get an instant AI audit
+          Get a free AI preview
           <br />
           <span className="text-electric-500">of any landing page</span>
         </h1>
         <p className="text-lg text-slate-400 max-w-2xl mx-auto mb-12">
-          Paste a URL and get a structured report on your value proposition, CTA
-          effectiveness, copy quality, trust signals, and SEO — in seconds.
+          Paste a URL and instantly see your overall score and category grades —
+          free. Unlock the full report with detailed insights and actionable
+          improvements for $4.99.
         </p>
 
-        {/* URL Input */}
+        {/* Form */}
         <form onSubmit={handleSubmit} className="max-w-2xl mx-auto">
-          <div className="flex flex-col sm:flex-row gap-3">
+          <div className="flex flex-col gap-3">
             <input
               type="text"
               value={url}
               onChange={(e) => setUrl(e.target.value)}
               placeholder="https://example.com"
-              className="flex-1 px-5 py-4 bg-navy-800 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-electric-500 focus:ring-1 focus:ring-electric-500 transition-all text-lg"
+              className="w-full px-5 py-4 bg-navy-800 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-electric-500 focus:ring-1 focus:ring-electric-500 transition-all text-lg"
               disabled={loading}
             />
-            <button
-              type="submit"
-              disabled={loading}
-              className="px-8 py-4 bg-electric-500 hover:bg-electric-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-all text-lg whitespace-nowrap"
-            >
-              {loading ? (
-                <span className="flex items-center justify-center gap-2">
-                  <svg
-                    className="animate-spin h-5 w-5"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                  >
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                    />
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                    />
-                  </svg>
-                  Analyzing...
-                </span>
-              ) : (
-                "Audit Page — $4.99"
-              )}
-            </button>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="your@email.com"
+                required
+                className="flex-1 px-5 py-4 bg-navy-800 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-electric-500 focus:ring-1 focus:ring-electric-500 transition-all"
+                disabled={loading}
+              />
+              <button
+                type="submit"
+                disabled={loading || !url.trim() || !email.trim()}
+                className="px-8 py-4 bg-electric-500 hover:bg-electric-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-all text-lg whitespace-nowrap"
+              >
+                {loading ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <svg
+                      className="animate-spin h-5 w-5"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      />
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                      />
+                    </svg>
+                    Analyzing…
+                  </span>
+                ) : (
+                  "Get Free Preview"
+                )}
+              </button>
+            </div>
           </div>
           {error && <p className="mt-3 text-red-400 text-sm">{error}</p>}
         </form>
@@ -137,17 +151,17 @@ export default function Home() {
             {
               step: "1",
               title: "Paste a URL",
-              desc: "Enter any landing page URL you want to audit.",
+              desc: "Enter any landing page URL. We'll fetch and analyze it instantly — no account needed.",
             },
             {
               step: "2",
-              title: "We fetch & analyze",
-              desc: "We scrape the page server-side and run it through our AI audit engine.",
+              title: "See your free preview",
+              desc: "Get your overall score and category letter grades right away, for free.",
             },
             {
               step: "3",
-              title: "Get your report",
-              desc: "Receive a detailed audit with scores, insights, and actionable improvements.",
+              title: "Unlock the full report",
+              desc: "Pay $4.99 to get detailed insights, observations, and actionable improvements.",
             },
           ].map((item) => (
             <div

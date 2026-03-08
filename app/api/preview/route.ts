@@ -1,46 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import * as cheerio from "cheerio";
-import { getReport } from "@/lib/reportStore";
+import { randomUUID } from "crypto";
+import { storeReport } from "@/lib/reportStore";
+import { saveEmail } from "@/lib/emailStore";
 
 export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
-    const { sessionId } = body;
+    const { url, email } = await req.json();
 
-    // Verify Stripe payment
-    if (!sessionId) {
-      return NextResponse.json({ error: "Payment required" }, { status: 402 });
-    }
-    const stripeKey = (process.env.STRIPE_SECRET_KEY || "").trim();
-    const stripeRes = await fetch(
-      `https://api.stripe.com/v1/checkout/sessions/${sessionId}`,
-      { headers: { Authorization: `Bearer ${stripeKey}` } }
-    );
-    const stripeSession = await stripeRes.json() as {
-      payment_status?: string;
-      error?: { message: string };
-    };
-    if (!stripeRes.ok || stripeSession.payment_status !== "paid") {
-      return NextResponse.json({ error: "Payment not completed" }, { status: 402 });
-    }
-
-    // New flow: retrieve stored report by ID (LLM was called during preview)
-    const { fullReportId } = body;
-    if (fullReportId) {
-      const stored = getReport(fullReportId);
-      if (!stored) {
-        return NextResponse.json(
-          { error: "Report expired or not found. Please run a new preview." },
-          { status: 404 }
-        );
-      }
-      return NextResponse.json({ ...stored.report, _url: stored.url });
-    }
-
-    // Legacy flow: url provided, run full audit now
-    const { url } = body;
     if (!url || typeof url !== "string") {
       return NextResponse.json({ error: "URL is required" }, { status: 400 });
     }
@@ -49,6 +18,10 @@ export async function POST(req: NextRequest) {
       new URL(url);
     } catch {
       return NextResponse.json({ error: "Invalid URL" }, { status: 400 });
+    }
+
+    if (email && typeof email === "string" && email.includes("@")) {
+      saveEmail(email.trim(), url);
     }
 
     // Fetch the page
@@ -132,7 +105,7 @@ export async function POST(req: NextRequest) {
       imagesMissingAlt,
     };
 
-    // Send to Groq
+    // Call Groq — happens once, result is stored and reused after payment
     const groqRes = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -189,10 +162,25 @@ Be specific, reference actual page content, give honest scores.`,
       return NextResponse.json({ error: "No response from AI" }, { status: 500 });
     }
 
-    const audit = JSON.parse(content);
-    return NextResponse.json(audit);
+    const fullReport = JSON.parse(content);
+    const reportId = randomUUID();
+
+    // Store full report — retrieved after payment
+    storeReport(reportId, { report: fullReport, url, email: email?.trim() });
+
+    // Return preview only (no details, just scores + 2 teaser improvements)
+    return NextResponse.json({
+      reportId,
+      url,
+      overallScore: fullReport.overallScore,
+      sections: fullReport.sections.map((s: { title: string; score: number }) => ({
+        title: s.title,
+        score: s.score,
+      })),
+      teaserImprovements: (fullReport.improvements as string[]).slice(0, 2),
+    });
   } catch (err: unknown) {
-    console.error("Audit error:", err);
+    console.error("Preview error:", err);
     const message = err instanceof Error ? err.message : "Internal server error";
 
     if (message.includes("rate limit") || message.includes("429")) {

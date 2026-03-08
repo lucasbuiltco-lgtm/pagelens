@@ -40,10 +40,33 @@ function AuditContent() {
 
   useEffect(() => {
     const sessionId = searchParams.get("session_id");
+    const fullReportId = searchParams.get("fullReportId");
     const urlParam = searchParams.get("url");
 
+    if (sessionId && fullReportId) {
+      // New flow: retrieve stored report by ID
+      const storedPreview = sessionStorage.getItem("previewData");
+      const previewUrl = storedPreview
+        ? (JSON.parse(storedPreview) as { url: string }).url
+        : "";
+      setAuditUrl(previewUrl);
+      fetch("/api/audit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessionId, fullReportId }),
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.error) throw new Error(data.error);
+          setAuditUrl(data._url || previewUrl);
+          setResult(data);
+        })
+        .catch((err) => setError(err.message || "Audit failed"));
+      return;
+    }
+
     if (sessionId && urlParam) {
-      // Coming from Stripe — run the audit
+      // Legacy flow: url in query param
       setAuditUrl(urlParam);
       fetch("/api/audit", {
         method: "POST",
