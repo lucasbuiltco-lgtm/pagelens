@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import * as Sentry from "@sentry/nextjs";
 
 export const runtime = "nodejs";
 
@@ -69,6 +70,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ sessionUrl: data.url });
   } catch (err) {
+    Sentry.captureException(err);
     console.error("Checkout error:", err);
     const message = err instanceof Error ? err.message : "Failed to create checkout";
     return NextResponse.json({ error: message }, { status: 500 });

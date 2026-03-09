@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import * as Sentry from "@sentry/nextjs";
 import * as cheerio from "cheerio";
 import { getReport } from "@/lib/reportStore";
 
@@ -192,6 +193,7 @@ Be specific, reference actual page content, give honest scores.`,
     const audit = JSON.parse(content);
     return NextResponse.json(audit);
   } catch (err: unknown) {
+    Sentry.captureException(err);
     console.error("Audit error:", err);
     const message = err instanceof Error ? err.message : "Internal server error";
 
