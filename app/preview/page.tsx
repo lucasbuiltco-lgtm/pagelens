@@ -7,9 +7,11 @@ import { ScoreRing } from "@/components/ScoreRing";
 interface PreviewData {
   reportId: string;
   url: string;
+  email?: string | null;
   overallScore: number;
   sections: { title: string; score: number }[];
   teaserImprovements: string[];
+  freeEligible?: boolean;
 }
 
 function scoreToGrade(score: number): string {
@@ -53,6 +55,8 @@ function PreviewContent() {
   const [preview, setPreview] = useState<PreviewData | null>(null);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [checkoutError, setCheckoutError] = useState("");
+  const [freeLoading, setFreeLoading] = useState(false);
+  const [freeError, setFreeError] = useState("");
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -92,6 +96,29 @@ function PreviewContent() {
     }
   }
 
+  async function handleFreeUnlock() {
+    if (!preview) return;
+    setFreeLoading(true);
+    setFreeError("");
+    try {
+      const res = await fetch("/api/audit/free", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: preview.email, fullReportId: preview.reportId }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to retrieve free report");
+      }
+      sessionStorage.setItem("auditResult", JSON.stringify({ ...data, _url: data._url || preview.url }));
+      router.push(`/audit?id=${preview.reportId}&free=1`);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Something went wrong";
+      setFreeError(message);
+      setFreeLoading(false);
+    }
+  }
+
   if (!preview) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -116,8 +143,8 @@ function PreviewContent() {
       <div className="max-w-3xl mx-auto px-6 py-10">
         {/* Header */}
         <div className="text-center mb-10">
-          <div className="inline-block px-3 py-1 mb-4 text-xs font-medium text-electric-400 bg-electric-500/10 border border-electric-500/20 rounded-full">
-            Free Preview
+          <div className={`inline-block px-3 py-1 mb-4 text-xs font-medium rounded-full border ${preview.freeEligible ? "text-green-400 bg-green-500/10 border-green-500/20" : "text-electric-400 bg-electric-500/10 border-electric-500/20"}`}>
+            {preview.freeEligible ? "Your First Report Is Free!" : "Free Preview"}
           </div>
           <h1 className="text-3xl font-bold text-white mb-2">Your Preview Report</h1>
           <p className="text-slate-500 text-sm break-all">{preview.url}</p>
@@ -293,30 +320,68 @@ function PreviewContent() {
           {/* Blur overlay with top CTA */}
           <div className="absolute inset-0 backdrop-blur-[3px] bg-navy-900/70 flex flex-col items-center justify-start pt-16 gap-6 rounded-2xl px-6">
             <div className="text-center">
-              <svg className="w-10 h-10 text-slate-400 mx-auto mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-              </svg>
-              <p className="text-white font-semibold text-base mb-1">Full report locked</p>
-              <p className="text-slate-400 text-sm">Unlock all {(preview.teaserImprovements.length || 3) + 5}+ action items and detailed analysis</p>
-            </div>
-            <button
-              onClick={handleUnlock}
-              disabled={checkoutLoading}
-              className="inline-flex items-center gap-2 px-8 py-3.5 bg-electric-500 hover:bg-electric-600 disabled:opacity-60 disabled:cursor-not-allowed text-white font-bold rounded-xl transition-all text-base shadow-lg shadow-electric-500/20"
-            >
-              {checkoutLoading ? (
+              {preview.freeEligible ? (
                 <>
-                  <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                  <svg className="w-10 h-10 text-green-400 mx-auto mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
                   </svg>
-                  Redirecting…
+                  <p className="text-white font-semibold text-base mb-1">Your full report is ready</p>
+                  <p className="text-slate-400 text-sm">First audit free — view all {(preview.teaserImprovements.length || 3) + 5}+ action items now</p>
                 </>
               ) : (
-                "Unlock Full Report — $4.99"
+                <>
+                  <svg className="w-10 h-10 text-slate-400 mx-auto mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                  </svg>
+                  <p className="text-white font-semibold text-base mb-1">Full report locked</p>
+                  <p className="text-slate-400 text-sm">Unlock all {(preview.teaserImprovements.length || 3) + 5}+ action items and detailed analysis</p>
+                </>
               )}
-            </button>
-            <p className="text-slate-600 text-xs">One-time payment · Instant access · No subscription</p>
+            </div>
+            {preview.freeEligible ? (
+              <>
+                <button
+                  onClick={handleFreeUnlock}
+                  disabled={freeLoading}
+                  className="inline-flex items-center gap-2 px-8 py-3.5 bg-green-500 hover:bg-green-600 disabled:opacity-60 disabled:cursor-not-allowed text-white font-bold rounded-xl transition-all text-base shadow-lg shadow-green-500/20"
+                >
+                  {freeLoading ? (
+                    <>
+                      <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                      </svg>
+                      Loading…
+                    </>
+                  ) : (
+                    "View Full Report — Free →"
+                  )}
+                </button>
+                {freeError && <p className="text-red-400 text-sm">{freeError}</p>}
+                <p className="text-slate-600 text-xs">First report is always free. Additional reports: $4.99</p>
+              </>
+            ) : (
+              <>
+                <button
+                  onClick={handleUnlock}
+                  disabled={checkoutLoading}
+                  className="inline-flex items-center gap-2 px-8 py-3.5 bg-electric-500 hover:bg-electric-600 disabled:opacity-60 disabled:cursor-not-allowed text-white font-bold rounded-xl transition-all text-base shadow-lg shadow-electric-500/20"
+                >
+                  {checkoutLoading ? (
+                    <>
+                      <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                      </svg>
+                      Redirecting…
+                    </>
+                  ) : (
+                    "Unlock Full Report — $4.99"
+                  )}
+                </button>
+                <p className="text-slate-600 text-xs">One-time payment · Instant access · No subscription</p>
+              </>
+            )}
           </div>
         </div>
 

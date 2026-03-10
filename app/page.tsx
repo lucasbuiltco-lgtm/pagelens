@@ -25,6 +25,11 @@ export default function Home() {
     let normalizedUrl = url.trim();
     if (!normalizedUrl) return;
 
+    if (!email.trim()) {
+      setError("Email required for your free report");
+      return;
+    }
+
     if (
       !normalizedUrl.startsWith("http://") &&
       !normalizedUrl.startsWith("https://")
@@ -68,8 +73,8 @@ export default function Home() {
 
   const faqs = [
     {
-      q: "Is the preview really free?",
-      a: "Yes. You get your overall score and category letter grades at no cost, with no account required. The full report with detailed insights and recommendations is $4.99.",
+      q: "Is the first audit really free?",
+      a: "Yes. Your first full report is completely free — just enter your email and URL. After that, additional audits are $4.99 each.",
     },
     {
       q: "What does the AI actually analyze?",
@@ -85,7 +90,7 @@ export default function Home() {
     },
     {
       q: "Do I need to create an account?",
-      a: "No account needed for the free preview. Your email is optional — provide it if you'd like a copy of the report delivered to your inbox.",
+      a: "No account needed. Just provide your email to claim your free first report.",
     },
     {
       q: "Who is PageLens for?",
@@ -110,14 +115,13 @@ export default function Home() {
           AI-Powered Landing Page Analysis
         </div>
         <h1 className="text-5xl md:text-6xl font-bold text-white leading-tight mb-6">
-          Get a free AI preview
+          Your first audit is free
           <br />
-          <span className="text-electric-500">of any landing page</span>
+          <span className="text-electric-500">on any landing page</span>
         </h1>
         <p className="text-lg text-slate-400 max-w-2xl mx-auto mb-4">
-          Paste a URL and instantly see your overall score and category grades —
-          free. Unlock the full report with detailed insights and actionable
-          improvements for $4.99.
+          Enter your email and a URL to get a complete AI audit — free for your
+          first report. Additional reports are $4.99.
         </p>
         <p className="text-sm text-slate-500 mb-10">
           Trusted by marketers, founders, and agencies.
@@ -145,7 +149,8 @@ export default function Home() {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="your@email.com (optional)"
+                  placeholder="your@email.com"
+                  required
                   className="w-full px-5 py-4 bg-navy-800 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-electric-500 focus:ring-1 focus:ring-electric-500 transition-all"
                   disabled={loading}
                 />
@@ -179,14 +184,14 @@ export default function Home() {
                     Analyzing…
                   </span>
                 ) : (
-                  "Get Free Preview"
+                  "Analyze My Page — Free"
                 )}
               </button>
             </div>
           </div>
           {error && <p className="mt-3 text-red-400 text-sm">{error}</p>}
           <p className="mt-3 text-xs text-slate-600">
-            No account required. Email is optional.
+            Your first report is always free. Additional reports: $4.99.
           </p>
         </form>
       </section>
@@ -200,18 +205,18 @@ export default function Home() {
           {[
             {
               step: "1",
-              title: "Paste a URL",
-              desc: "Enter any landing page URL. We'll fetch and analyze it instantly — no account needed.",
+              title: "Enter your email + URL",
+              desc: "Your email unlocks your free first audit. No account required.",
             },
             {
               step: "2",
-              title: "See your free preview",
-              desc: "Get your overall score and category letter grades right away, for free.",
+              title: "We analyze your page",
+              desc: "Our AI audits your landing page across value proposition, CTAs, copy, trust signals, and SEO.",
             },
             {
               step: "3",
-              title: "Unlock the full report",
-              desc: "Pay $4.99 to get detailed insights, observations, and actionable improvements.",
+              title: "Get your free report",
+              desc: "First audit is always free. Additional audits are $4.99.",
             },
           ].map((item) => (
             <div

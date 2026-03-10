@@ -3,6 +3,7 @@ import * as cheerio from "cheerio";
 import { randomUUID } from "crypto";
 import { storeReport } from "@/lib/reportStore";
 import { saveEmail } from "@/lib/emailStore";
+import { hasFreeAudit } from "@/lib/freeAuditStore";
 
 export const runtime = "nodejs";
 
@@ -168,16 +169,21 @@ Be specific, reference actual page content, give honest scores.`,
     // Store full report — retrieved after payment
     storeReport(reportId, { report: fullReport, url, email: email?.trim() });
 
+    const normalizedEmail = email && typeof email === "string" ? email.trim() : null;
+    const freeEligible = !!(normalizedEmail && !hasFreeAudit(normalizedEmail));
+
     // Return preview only (no details, just scores + 2 teaser improvements)
     return NextResponse.json({
       reportId,
       url,
+      email: normalizedEmail,
       overallScore: fullReport.overallScore,
       sections: fullReport.sections.map((s: { title: string; score: number }) => ({
         title: s.title,
         score: s.score,
       })),
       teaserImprovements: (fullReport.improvements as string[]).slice(0, 2),
+      freeEligible,
     });
   } catch (err: unknown) {
     console.error("Preview error:", err);
