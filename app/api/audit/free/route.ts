@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getReport } from "@/lib/reportStore";
 import { hasFreeAudit, claimFreeAudit } from "@/lib/freeAuditStore";
+import { trackFreeUnlock } from "@/lib/analytics";
 
 export const runtime = "nodejs";
 
@@ -32,6 +33,7 @@ export async function POST(req: NextRequest) {
     }
 
     claimFreeAudit(email);
+    trackFreeUnlock(email);
 
     return NextResponse.json({ ...stored.report, _url: stored.url });
   } catch (err: unknown) {

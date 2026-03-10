@@ -4,6 +4,7 @@ import { randomUUID } from "crypto";
 import { storeReport } from "@/lib/reportStore";
 import { saveEmail } from "@/lib/emailStore";
 import { hasFreeAudit } from "@/lib/freeAuditStore";
+import { trackPreview } from "@/lib/analytics";
 
 export const runtime = "nodejs";
 
@@ -171,6 +172,8 @@ Be specific, reference actual page content, give honest scores.`,
 
     const normalizedEmail = email && typeof email === "string" ? email.trim() : null;
     const freeEligible = !!(normalizedEmail && !hasFreeAudit(normalizedEmail));
+
+    trackPreview(url, !!normalizedEmail);
 
     // Return preview only (no details, just scores + 2 teaser improvements)
     return NextResponse.json({

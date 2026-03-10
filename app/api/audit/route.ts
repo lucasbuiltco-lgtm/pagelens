@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import * as Sentry from "@sentry/nextjs";
 import * as cheerio from "cheerio";
 import { getReport } from "@/lib/reportStore";
+import { trackPaidUnlock } from "@/lib/analytics";
 
 export const runtime = "nodejs";
 
@@ -26,6 +27,8 @@ export async function POST(req: NextRequest) {
     if (!stripeRes.ok || stripeSession.payment_status !== "paid") {
       return NextResponse.json({ error: "Payment not completed" }, { status: 402 });
     }
+
+    trackPaidUnlock(sessionId);
 
     // New flow: retrieve stored report by ID (LLM was called during preview)
     const { fullReportId } = body;
