@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 export default function Home() {
   const [url, setUrl] = useState("");
@@ -106,7 +107,12 @@ export default function Home() {
           <span className="text-electric-500">Page</span>
           <span className="text-white">Lens</span>
         </div>
-        <span />
+        <Link
+          href="/blog"
+          className="text-slate-400 hover:text-white transition-colors text-sm"
+        >
+          Blog
+        </Link>
       </nav>
 
       {/* Hero */}
